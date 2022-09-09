@@ -3,57 +3,15 @@ from eth_utils import is_checksum_address
 from scripts.helpful_scripts import (
     get_account,
 )
-
-
-yearnDep = config["dependencies"][0]
-
-API_VERSION = yearnDep.split("@")[-1]
-Vault = project.load(yearnDep).Vault
-
-
-def get_address(msg: str, default: str = None) -> str:
-    val = click.prompt(msg, default=default)
-
-    # Keep asking user for click.prompt until it passes
-    while True:
-
-        if is_checksum_address(val):
-            return val
-        elif addr := web3.ens.address(val):
-            click.echo(f"Found ENS '{val}' [{addr}]")
-            return addr
-
-        click.echo(
-            f"I'm sorry, but '{val}' is not a checksummed address or valid ENS record"
-        )
-        # NOTE: Only display default once
-        val = click.prompt(msg)
+import click
 
 
 def main():
-    print(f"You are using the '{network.show_active()}' network")
-    dev = get_account()
-    print(f"You are using: 'dev' [{dev.address}]")
+    yearnvaults = project.load(config["dependencies"][0]) #load the base vaults project to access the original Vault contract
+    Vault = yearnvaults.Vault
+    Token = yearnvaults.Token
+    vault = Vault.at("0xdA816459F1AB5631232FE5e97a05BBBb94970c95")
+    token = Token.at("0x6b175474e89094c44da98b954eedeac495271d0f")
+    gov = "ychad.eth"  # ENS for Yearn Governance Multisig
 
-    if input("Is there a Vault for this strategy already? y/[N]: ").lower() == "y":
-        vault = Vault.at(get_address("Deployed Vault: "))
-        assert vault.apiVersion() == API_VERSION
-    else:
-        print("You should deploy one vault using scripts from Vault project")
-        return  # TODO: Deploy one using scripts from Vault project
-
-    print(
-        f"""
-    Strategy Parameters
-
-       api: {API_VERSION}
-     token: {vault.token()}
-      name: '{vault.name()}'
-    symbol: '{vault.symbol()}'
-    """
-    )
-    publish_source = click.confirm("Verify source on etherscan?")
-    if input("Deploy Strategy? y/[N]: ").lower() != "y":
-        return
-
-    strategy = Strategy.deploy(vault, {"from": dev}, publish_source=publish_source)
+    strategy = Strategy.deploy(vault, {"from": accounts[0]})
