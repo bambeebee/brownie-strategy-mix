@@ -1,14 +1,13 @@
+from pathlib import Path
+
 from brownie import Strategy, accounts, config, network, project, web3
 from eth_utils import is_checksum_address
-from scripts.helpful_scripts import (
-    get_account,
-)
+import click
 
-
-yearnDep = config["dependencies"][0]
-
-API_VERSION = yearnDep.split("@")[-1]
-Vault = project.load(yearnDep).Vault
+API_VERSION = config["dependencies"][0].split("@")[-1]
+Vault = project.load(
+    Path.home() / ".brownie" / "packages" / config["dependencies"][0]
+).Vault
 
 
 def get_address(msg: str, default: str = None) -> str:
@@ -32,7 +31,7 @@ def get_address(msg: str, default: str = None) -> str:
 
 def main():
     print(f"You are using the '{network.show_active()}' network")
-    dev = get_account()
+    dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
     print(f"You are using: 'dev' [{dev.address}]")
 
     if input("Is there a Vault for this strategy already? y/[N]: ").lower() == "y":
